@@ -23,7 +23,7 @@ import { collection, getDocs } from "firebase/firestore";
 const Accordion = styled((props) => (
   <MuiAccordion disableGutters elevation={0} square {...props} />
 ))(({ theme }) => ({
-  paddingTop: "20px",
+  paddingTop: "10px",
   background: "none",
   "&:not(:first-of-type)": {
     borderTop: "1px dotted rgba(255, 255, 255, 0.1)",
@@ -34,7 +34,7 @@ const Accordion = styled((props) => (
   borderRadius: "12px",
   transition: "all 0.3s ease",
   "&.Mui-expanded": {
-    margin: "16px 0",
+    margin: "12px 0",
     backgroundColor: "rgba(255, 255, 255, 0.02)",
   },
 }));
@@ -48,7 +48,7 @@ const AccordionSummary = styled((props) => (
   />
 ))(({ theme }) => ({
   flexDirection: "row-reverse",
-  padding: "12px 16px",
+  padding: "8px 16px",
   borderRadius: "12px",
   minHeight: "56px !important",
   [`& .${accordionSummaryClasses.expandIconWrapper}.${accordionSummaryClasses.expanded}`]:
@@ -57,15 +57,12 @@ const AccordionSummary = styled((props) => (
     },
   [`& .${accordionSummaryClasses.content}`]: {
     marginLeft: theme.spacing(1),
-    marginRight: theme.spacing(2),
+    marginRight: theme.spacing(1),
   },
   "&.Mui-expanded": {
     backgroundColor: "rgba(96, 165, 250, 0.08)",
     borderBottom: "1px solid rgba(96, 165, 250, 0.2)",
   },
-  ...theme.applyStyles("dark", {
-    background: "none",
-  }),
 }));
 
 const AccordionDetails = styled(MuiAccordionDetails)(({ theme }) => ({
@@ -76,13 +73,12 @@ const AccordionDetails = styled(MuiAccordionDetails)(({ theme }) => ({
 }));
 
 export default function CustomizedAccordions() {
-  const [expanded, setExpanded] = React.useState("panel1");
-  const [openFormulas, setOpenFormulas] = React.useState({});
+  const [expandedTopic, setExpandedTopic] = React.useState("panel1");
+  const [openFormulaKey, setOpenFormulaKey] = React.useState(null); // Faqat bitta formula ochiq bo'lishi uchun
   const [topics, setTopics] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const isTablet = useMediaQuery(theme.breakpoints.between("sm", "md"));
 
   // Firebase'dan ma'lumotlarni o'qish
   React.useEffect(() => {
@@ -93,11 +89,7 @@ export default function CustomizedAccordions() {
         querySnapshot.forEach((doc) => {
           topicsData.push({ id: doc.id, ...doc.data() });
         });
-        // order fieldi bo'yicha tartiblash, agar mavjud bo'lsa
-        topicsData.sort((a, b) => {
-          if (a.order && b.order) return a.order - b.order;
-          return 0;
-        });
+        topicsData.sort((a, b) => (a.order || 0) - (b.order || 0));
         setTopics(topicsData);
       } catch (error) {
         console.error("Ma'lumotlarni o'qishda xatolik:", error);
@@ -105,66 +97,35 @@ export default function CustomizedAccordions() {
         setLoading(false);
       }
     };
-
     fetchTopics();
   }, []);
 
   const handleTopicChange = (panel) => (event, newExpanded) => {
-    setExpanded(newExpanded ? panel : false);
+    setExpandedTopic(newExpanded ? panel : false);
   };
 
-  const handleFormulaToggle = (topicId, ruleIndex, formulaIndex) => {
-    const key = `${topicId}-${ruleIndex}-${formulaIndex}`;
-    setOpenFormulas((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+  const handleFormulaToggle = (key) => {
+    // Agar ochiq bo'lganini bossa yopadi, aks holda yangisini ochib eskisin yopadi
+    setOpenFormulaKey(openFormulaKey === key ? null : key);
   };
 
-  // Loading holati
   if (loading) {
     return (
       <Box className="flex flex-col items-center justify-center py-20 gap-4">
-        <Box className="relative">
-          <CircularProgress
-            size={60}
-            sx={{
-              color: "#3b82f6",
-              animationDuration: "1.5s",
-            }}
-          />
-          <Box
-            className="absolute inset-0 flex items-center justify-center"
-            sx={{ animation: "pulse 2s infinite" }}
-          >
-            <Typography className="text-blue-400 text-xs font-medium">
-              ...
-            </Typography>
-          </Box>
-        </Box>
-        <Typography className="text-gray-400 text-sm animate-pulse">
+        <CircularProgress size={60} sx={{ color: "#3b82f6" }} />
+        <Typography className="text-gray-400 text-sm">
           Mavzular yuklanmoqda...
         </Typography>
       </Box>
     );
   }
 
-  // Bo'sh holat
   if (topics.length === 0) {
     return (
-      <Box className="flex flex-col items-center justify-center py-20 px-6 border-2 border-dashed border-blue-500/20 rounded-2xl bg-gradient-to-br from-blue-500/5 to-transparent backdrop-blur-sm">
-        <Box className="relative mb-6">
-          <MdLibraryBooks size={60} className="text-blue-400/60" />
-          <Box className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-            <Typography className="text-white text-xs">0</Typography>
-          </Box>
-        </Box>
-        <Typography className="text-white text-xl font-semibold mb-2">
+      <Box className="flex flex-col items-center justify-center py-20 px-6 border-2 border-dashed border-blue-500/20 rounded-2xl">
+        <MdLibraryBooks size={60} className="text-blue-400/60" />
+        <Typography className="text-white text-xl font-semibold mt-4">
           Hali mavzular yo'q
-        </Typography>
-        <Typography className="text-gray-400 text-sm text-center max-w-xs">
-          Firebase bazasida "topics" kolleksiyasi bo'sh yoki ma'lumotlar hali
-          qo'shilmagan.
         </Typography>
       </Box>
     );
@@ -176,53 +137,26 @@ export default function CustomizedAccordions() {
         width: "100%",
         maxWidth: "1200px",
         mx: "auto",
-        px: { xs: 1, sm: 2, md: 3 },
+        px: { xs: 1, sm: 2 },
       }}
     >
-      {topics?.map((topic, topicIndex) => {
+      {topics.map((topic, topicIndex) => {
         const panelId = `panel${topic.id || topicIndex + 1}`;
 
         return (
           <Accordion
             key={topic.id}
-            expanded={expanded === panelId}
+            expanded={expandedTopic === panelId}
             onChange={handleTopicChange(panelId)}
-            sx={{
-              width: "100%",
-              mb: { xs: 2, sm: 3 },
-              "&:hover": {
-                backgroundColor: "rgba(255, 255, 255, 0.03)",
-              },
-            }}
           >
-            <AccordionSummary
-              aria-controls={`${panelId}-content`}
-              id={`${panelId}-header`}
-              sx={{
-                color: "#fff",
-                borderRadius: "12px 12px 0 0",
-              }}
-            >
-              <Box className="flex justify-between items-center w-full">
-                <Typography
-                  component="span"
-                  className="font-semibold text-base sm:text-lg md:text-xl"
-                  sx={{
-                    color: "#f3f4f6",
-                    textShadow: "0 1px 2px rgba(0,0,0,0.5)",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    display: "-webkit-box",
-                    WebkitLineClamp: 1,
-                    WebkitBoxOrient: "vertical",
-                  }}
-                >
+            <AccordionSummary>
+              <Box className="flex justify-between items-center w-full gap-2">
+                <Typography className="font-semibold text-base sm:text-lg md:text-xl text-gray-100">
                   {topic.theme}
                 </Typography>
-
                 {topic.themeFormula && (
-                  <Box className="hidden sm:flex justify-end ml-2">
-                    <span className="inline-flex items-center rounded-full bg-gradient-to-r from-green-500/10 to-emerald-500/10 px-3 py-1 text-xs font-medium text-green-400 border border-green-500/20 whitespace-nowrap backdrop-blur-sm">
+                  <Box className="hidden sm:flex">
+                    <span className="inline-flex items-center rounded-full bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-400 border border-blue-500/20">
                       {topic.themeFormula}
                     </span>
                   </Box>
@@ -233,260 +167,141 @@ export default function CustomizedAccordions() {
             <AccordionDetails
               sx={{
                 background:
-                  "linear-gradient(145deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.5))",
+                  "linear-gradient(145deg, rgba(30, 41, 59, 0.4), rgba(15, 23, 42, 0.4))",
                 border: "1px solid rgba(59, 130, 246, 0.1)",
-                borderRadius: "0 0 12px 12px",
-                backdropFilter: "blur(10px)",
                 display: "flex",
                 flexDirection: "column",
-                gap: { xs: 3, sm: 4 },
-                width: "100%",
+                gap: 3,
               }}
             >
-              {/* Guruh nomi */}
               {topic.groupName && (
-                <Box className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-lg border border-blue-500/20">
-                  <Box className="w-2 h-6 bg-gradient-to-b from-blue-400 to-cyan-400 rounded-full" />
-                  <Typography className="text-blue-300 !text-sm sm:!text-base font-semibold">
+                <Box className="flex items-center gap-2 px-3 py-2 bg-blue-500/5 rounded-lg border border-blue-500/10">
+                  <Box className="w-1 h-5 bg-blue-400 rounded-full" />
+                  <Typography className="text-blue-300 text-sm font-semibold">
                     {topic.groupName}
                   </Typography>
                 </Box>
               )}
 
-              {/* Qoidalar */}
-              {topic.rules &&
-                topic.rules.map((rule, ruleIndex) => (
-                  <Box
-                    key={ruleIndex}
-                    className="flex flex-col sm:flex-row gap-3 sm:gap-5"
-                  >
-                    <Box className="flex items-start gap-3 sm:gap-0">
-                      <Box className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/30">
-                        <Typography className="!text-sm font-bold text-white">
-                          {ruleIndex + 1}
-                        </Typography>
-                      </Box>
-                      {isMobile && (
-                        <Box className="flex-1 sm:hidden">
-                          <Typography className="!text-sm text-gray-200">
-                            {rule.text}
-                          </Typography>
-                        </Box>
-                      )}
+              {topic.rules?.map((rule, ruleIndex) => (
+                <Box key={ruleIndex} className="flex flex-col gap-3">
+                  <Box className="flex items-start gap-3">
+                    <Box className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full bg-blue-500/20 border border-blue-500/30 text-xs font-bold text-white">
+                      {ruleIndex + 1}
                     </Box>
-
-                    <Box className="flex-1">
-                      {/* Desktop uchun qoida matni */}
-                      {!isMobile && (
-                        <Typography className="!text-sm sm:!text-base text-gray-200 mb-3">
-                          {rule.text}
-                        </Typography>
-                      )}
-
-                      {/* Qoida shakli */}
-                      {rule.shape && (
-                        <Box className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-800/50 rounded-lg mb-4">
-                          <Box className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
-                          <Typography className="!text-xs text-yellow-400 font-mono">
-                            {rule.shape}
-                          </Typography>
-                        </Box>
-                      )}
-
-                      {/* Formulalar - Responsive grid */}
-                      {rule.formulas && (
-                        <Box
-                          className="grid gap-3 mb-4"
-                          sx={{
-                            gridTemplateColumns: {
-                              xs: "repeat(1, 1fr)",
-                              sm: "repeat(2, 1fr)",
-                              md: "repeat(3, 1fr)",
-                              lg: "repeat(4, 1fr)",
-                            },
-                          }}
-                        >
-                          {rule.formulas.map((formula, formulaIndex) => {
-                            const formulaKey = `${topic.id}-${ruleIndex}-${formulaIndex}`;
-                            const isOpen = openFormulas[formulaKey] || false;
-
-                            return (
-                              <Box
-                                key={formulaIndex}
-                                className="relative group"
-                                sx={{
-                                  minWidth: { xs: "100%", sm: "140px" },
-                                }}
-                              >
-                                {/* Formula bosiladigan qism */}
-                                <Box
-                                  onClick={() =>
-                                    handleFormulaToggle(
-                                      topic.id,
-                                      ruleIndex,
-                                      formulaIndex,
-                                    )
-                                  }
-                                  className="flex items-center gap-2 cursor-pointer select-none p-2 sm:p-3 rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-95"
-                                  sx={{
-                                    background: isOpen
-                                      ? "linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(147, 51, 234, 0.1))"
-                                      : "linear-gradient(135deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.6))",
-                                    border: isOpen
-                                      ? "1px solid rgba(59, 130, 246, 0.3)"
-                                      : "1px solid rgba(255, 255, 255, 0.1)",
-                                    boxShadow: isOpen
-                                      ? "0 4px 20px rgba(59, 130, 246, 0.2)"
-                                      : "0 2px 10px rgba(0, 0, 0, 0.1)",
-                                  }}
-                                >
-                                  {isOpen ? (
-                                    <KeyboardArrowDownIcon
-                                      sx={{
-                                        fontSize: { xs: "1rem", sm: "1.2rem" },
-                                        color: "#60a5fa",
-                                      }}
-                                    />
-                                  ) : (
-                                    <KeyboardArrowRightIcon
-                                      sx={{
-                                        fontSize: { xs: "1rem", sm: "1.2rem" },
-                                        color: "#9ca3af",
-                                      }}
-                                    />
-                                  )}
-                                  <Typography
-                                    className="!text-xs sm:!text-sm font-medium text-center flex-1"
-                                    sx={{
-                                      color: isOpen ? "#93c5fd" : "#e5e7eb",
-                                      fontWeight: isOpen ? 600 : 500,
-                                    }}
-                                  >
-                                    {formula.formula}
-                                  </Typography>
-                                </Box>
-                                {/* Formula tafsilotlari */}
-                                <Collapse
-                                  in={isOpen}
-                                  timeout={300}
-                                  unmountOnExit
-                                >
-                                  <Box
-                                    className="mt-3 ml-2 sm:ml-8 p-3 sm:p-4 rounded-xl"
-                                    sx={{
-                                      background:
-                                        "linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.8))",
-                                      borderLeft:
-                                        "3px solid rgba(59, 130, 246, 0.5)",
-                                      boxShadow:
-                                        "0 4px 20px rgba(0, 0, 0, 0.3)",
-                                    }}
-                                  >
-                                    <Box className="flex gap-3">
-                                      <Box className="flex flex-col items-center">
-                                        <Box className="w-2  h-2 rounded-full bg-blue-500 mt-1" />
-                                        <Box className="w-px h-full bg-gradient-to-b from-blue-500 to-transparent mt-1" />
-                                      </Box>
-                                      <Box className="flex-1">
-                                        <Typography className="text-gray-300 !text-xs sm:!text-sm leading-relaxed mb-3">
-                                          {formula.title}
-                                        </Typography>
-
-                                        {formula.examples?.length > 0 && (
-                                          <Box className="space-y-2 mb-4">
-                                            <Typography className="text-gray-400 !text-xs font-medium mb-2">
-                                              Misollar:
-                                            </Typography>
-                                            {formula.examples.map(
-                                              (example, exampleIndex) => (
-                                                <Box
-                                                  key={exampleIndex}
-                                                  className="flex items-start gap-2 p-2 bg-gradient-to-r from-blue-500/5 to-transparent rounded-lg"
-                                                >
-                                                  <Box className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-500/20">
-                                                    <Typography className="!text-xs text-blue-400 font-bold">
-                                                      {exampleIndex + 1}
-                                                    </Typography>
-                                                  </Box>
-                                                  <Typography className="text-blue-200 !text-xs sm:!text-sm flex-1">
-                                                    {example}
-                                                  </Typography>
-                                                </Box>
-                                              ),
-                                            )}
-                                          </Box>
-                                        )}
-                                      </Box>
-                                    </Box>
-
-                                    {formula.note && (
-                                      <Box
-                                        className="mt-4 p-3 rounded-lg"
-                                        sx={{
-                                          background:
-                                            "linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(21, 128, 61, 0.05))",
-                                          border:
-                                            "1px solid rgba(34, 197, 94, 0.2)",
-                                        }}
-                                      >
-                                        <Typography className="text-green-400 !text-xs italic flex items-start gap-2">
-                                          <span className="text-green-500 text-lg">
-                                            💡
-                                          </span>
-                                          <span>{formula.note}</span>
-                                        </Typography>
-                                      </Box>
-                                    )}
-                                  </Box>
-                                </Collapse>
-                              </Box>
-                            );
-                          })}
-                        </Box>
-                      )}
-                    </Box>
-                  </Box>
-                ))}
-
-              {/* Oddiy text qoidalar */}
-              {topic.simpleRules && topic.simpleRules.length > 0 && (
-                <Box className="p-3 sm:p-4 rounded-xl bg-gradient-to-r from-gray-800/30 to-gray-900/30 border border-gray-700/50">
-                  <Box className="flex items-center gap-2 mb-3">
-                    <Box className="w-2 h-5 bg-gradient-to-b from-purple-400 to-pink-400 rounded-full" />
-                    <Typography className="text-gray-300 !text-sm sm:!text-base font-semibold">
-                      Qoidalar:
+                    <Typography className="text-sm sm:text-base text-gray-200 leading-relaxed">
+                      {rule.text}
                     </Typography>
                   </Box>
-                  <Box className="space-y-2 sm:space-y-3">
-                    {topic.simpleRules.map((simpleRule, idx) => (
-                      <Box
-                        key={idx}
-                        className="flex items-start gap-3 p-2 sm:p-3 rounded-lg hover:bg-white/5 transition-colors"
-                      >
-                        <Box className="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 mt-0.5">
-                          <Typography className="!text-xs text-purple-400 font-bold">
-                            •
-                          </Typography>
+
+                  {rule.shape && (
+                    <Box className="ml-10 inline-flex items-center gap-2 px-3 py-1 bg-gray-800/40 rounded-md w-fit">
+                      <Typography className="text-[10px] sm:text-xs text-yellow-400 font-mono">
+                        {rule.shape}
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {/* FORMULALAR GRIDI */}
+                  <Box
+                    className="grid gap-3 mt-2"
+                    sx={{
+                      gridTemplateColumns: {
+                        xs: "1fr",
+                        sm: "repeat(auto-fill, minmax(240px, 1fr))",
+                      },
+                    }}
+                  >
+                    {rule.formulas?.map((formula, formulaIndex) => {
+                      const formulaKey = `${topic.id}-${ruleIndex}-${formulaIndex}`;
+                      const isFormulaOpen = openFormulaKey === formulaKey;
+
+                      return (
+                        <Box key={formulaIndex} className="w-full">
+                          <Box
+                            onClick={() => handleFormulaToggle(formulaKey)}
+                            className={`flex items-center gap-2 cursor-pointer p-3 rounded-xl transition-all duration-300 border ${
+                              isFormulaOpen
+                                ? "bg-blue-500/10 border-blue-500/40 shadow-lg shadow-blue-500/5"
+                                : "bg-gray-800/40 border-white/5 hover:border-white/10"
+                            }`}
+                          >
+                            {isFormulaOpen ? (
+                              <KeyboardArrowDownIcon
+                                sx={{ fontSize: "1.2rem", color: "#60a5fa" }}
+                              />
+                            ) : (
+                              <KeyboardArrowRightIcon
+                                sx={{ fontSize: "1.2rem", color: "#9ca3af" }}
+                              />
+                            )}
+                            <Typography className="text-xs sm:text-sm font-medium text-gray-200 truncate">
+                              {formula.formula}
+                            </Typography>
+                          </Box>
+
+                          <Collapse
+                            in={isFormulaOpen}
+                            timeout={300}
+                            unmountOnExit
+                          >
+                            <Box className="mt-2 p-4 rounded-xl bg-gray-900/60 border-l-4 border-blue-500/50">
+                              <Typography className="text-gray-300 text-xs sm:text-sm mb-3 italic">
+                                {formula.title}
+                              </Typography>
+
+                              {formula.examples?.length > 0 && (
+                                <Box className="space-y-2">
+                                  {formula.examples.map((ex, idx) => (
+                                    <Box
+                                      key={idx}
+                                      className="flex gap-2 p-2 bg-white/5 rounded-lg"
+                                    >
+                                      <Typography className="text-blue-400 font-bold text-xs">
+                                        {idx + 1}.
+                                      </Typography>
+                                      <Typography className="text-gray-200 text-xs sm:text-sm">
+                                        {ex}
+                                      </Typography>
+                                    </Box>
+                                  ))}
+                                </Box>
+                              )}
+
+                              {formula.note && (
+                                <Box className="mt-3 p-2 bg-green-500/5 border border-green-500/20 rounded-lg">
+                                  <Typography className="text-green-400 text-[11px] sm:text-xs flex gap-1">
+                                    {formula.note}
+                                  </Typography>
+                                </Box>
+                              )}
+                            </Box>
+                          </Collapse>
                         </Box>
-                        <Typography className="text-gray-300 !text-xs sm:!text-sm flex-1">
-                          {simpleRule}
+                      );
+                    })}
+                  </Box>
+                </Box>
+              ))}
+
+              {/* ODDIY QOIDALAR LISTI */}
+              {topic.simpleRules?.length > 0 && (
+                <Box className="mt-2 p-4 rounded-xl bg-purple-500/5 border border-purple-500/10">
+                  <Typography className="text-purple-300 text-sm font-bold mb-3 flex items-center gap-2">
+                    <Box className="w-1 h-4 bg-purple-400 rounded-full" />{" "}
+                    Qoidalar:
+                  </Typography>
+                  <Box className="space-y-3">
+                    {topic.simpleRules.map((sRule, idx) => (
+                      <Box key={idx} className="flex items-start gap-2">
+                        <Typography className="text-purple-400 font-bold">
+                          •
+                        </Typography>
+                        <Typography className="text-gray-300 text-xs sm:text-sm leading-relaxed">
+                          {sRule}
                         </Typography>
                       </Box>
                     ))}
-                  </Box>
-                </Box>
-              )}
-
-              {/* Mobile uchun themeFormula */}
-              {topic.themeFormula && isMobile && (
-                <Box className="mt-4 pt-4 border-t border-gray-700/50">
-                  <Typography className="text-gray-400 !text-xs mb-2">
-                    Asosiy formula:
-                  </Typography>
-                  <Box className="inline-flex items-center rounded-lg bg-gradient-to-r from-green-500/10 to-emerald-500/10 px-3 py-2">
-                    <Typography className="text-green-400 !text-sm font-mono">
-                      {topic.themeFormula}
-                    </Typography>
                   </Box>
                 </Box>
               )}
